@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Local harness state that must never be committed
+.dsh/
+sessions/
+storages/
+attachments/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs and scratch output
+*.log
+_scan*.txt
+_spill*.txt
+tmp/
+temp/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,66 @@
+{
+  "name": "dsh-session-delete",
+  "version": "1.0.0",
+  "description": "Permanently delete DeepSeek Harness sessions: a per-session row in the \"...\" menu and a one-click cleanup for every archived session in the Ungrouped group — log, projection cache, search index rows and registry bookkeeping. Not archiving.",
+  "license": "MIT",
+  "author": "bxdsjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bxdsjs/dsh-session-delete.git"
+  },
+  "homepage": "https://github.com/bxdsjs/dsh-session-delete#readme",
+  "bugs": {
+    "url": "https://github.com/bxdsjs/dsh-session-delete/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "session",
+    "delete",
+    "archive",
+    "cleanup"
+  ],
+  "type": "module",
+  "main": "src/node.js",
+  "exports": {
+    ".": "./src/node.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "locale",
+    "tools",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "test": "node tools/smoke-host.mjs",
+    "check": "node --check src/node.js && node --check lib/client.js",
+    "inventory": "node tools/live-inventory.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  }
+}

@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [24.x]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Syntax check both halves
+        run: |
+          node --check src/node.js
+          node --check lib/client.js
+
+      - name: Host-half smoke test
+        # Runs against a throwaway $DSH_HOME; never touches a real profile.
+        # node:sqlite (Node >= 22.13) is required by the index-purge assertions.
+        run: node tools/smoke-host.mjs
+
+      - name: Plugin manifest sanity
+        run: |
+          node -e "const p=require('./package.json'); if(p.dsh?.bundle?.patch!=='./cordis.patch.yml') throw new Error('bundle patch missing'); if(p.dsh?.client?.platform!=='web') throw new Error('client platform missing'); if(!p.exports?.['./client']) throw new Error('client export missing'); console.log('manifest ok')"

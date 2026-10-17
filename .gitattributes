@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Keep these bytes untouched on every platform.
+*.png binary
+*.jpg binary
+*.ico binary
+*.zstd binary

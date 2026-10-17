@@ -22,9 +22,10 @@
 **不是归档。** 归档只是把一个 id 记进 `archivedSessionIds`，日志还在、检索还能命中、换个筛选条件又看得见；本插件做的是 unlink。
 
 ---
-示意图：<img width="128" height="128" alt="屏幕截图 2026-10-17 234937" src="https://github.com/user-attachments/assets/82c561b0-c4f7-4517-9dcf-6a0ff476c38e" />
-<img width="128" height="128" alt="屏幕截图 2026-10-17 234942" src="https://github.com/user-attachments/assets/1e06e0c3-5cb9-489e-9f53-d62a3cd24059" />
-<img width="128" height="128" alt="屏幕截图 2026-10-17 234928" src="https://github.com/user-attachments/assets/3cf8a7a9-808c-44b2-99db-12a590eedb07" />
+**示意图：**
+<img width="256" height="256" alt="屏幕截图 2026-10-17 234937" src="https://github.com/user-attachments/assets/82c561b0-c4f7-4517-9dcf-6a0ff476c38e" />
+<img width="256" height="256" alt="屏幕截图 2026-10-17 234942" src="https://github.com/user-attachments/assets/1e06e0c3-5cb9-489e-9f53-d62a3cd24059" />
+<img width="256" height="256" alt="屏幕截图 2026-10-17 234928" src="https://github.com/user-attachments/assets/3cf8a7a9-808c-44b2-99db-12a590eedb07" />
 
 
 ## 它到底删了什么

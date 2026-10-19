@@ -105,17 +105,20 @@ index.close()
 // registry: a purged id really disappears from the projection.
 let archived = [TARGET, BULK_A, BULK_B, GROUPED, 'session-other']
 let handler
+let registeredRoute
 const emitted = []
 const ctx = {
   inject(_deps, callback) {
     callback({
-      connection: {
-        rpc: {
-          handle(channel, fn) {
-            handler = fn
-            return async () => {}
-          },
+      webServer: {
+        register(route) {
+          registeredRoute = route
+          return () => {}
         },
+      },
+      effect(run, _label) {
+        const dispose = run()
+        return typeof dispose === 'function' ? dispose : () => {}
       },
     })
   },
@@ -145,7 +148,40 @@ const mod = await import('../src/node.js')
 if (mod.name !== 'dsh-session-delete') throw new Error('name export missing')
 console.log('name =', mod.name, '| inject =', JSON.stringify(mod.inject))
 mod.apply(ctx)
-if (typeof handler !== 'function') throw new Error('RPC handler was not registered')
+if (registeredRoute === undefined) throw new Error('RPC route was not registered')
+if (registeredRoute.path !== '/dsh-session-delete') throw new Error(`unexpected route path ${registeredRoute.path}`)
+// Drive the real HTTP handler with a JSON envelope, exactly like the browser
+// client does, so the wire contract itself is under test.
+handler = async (endpoint, payload) => {
+  const rpcId = 'smoke-rpc'
+  let status = 0
+  let body = ''
+  const req = {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    on(event, fn) {
+      if (event === 'data') fn(Buffer.from(JSON.stringify({ type: 'client-request', rpcId, method: endpoint, payload })))
+      else if (event === 'end') fn()
+      return req
+    },
+  }
+  const res = {
+    writeHead(code) {
+      status = code
+      return res
+    },
+    end(text) {
+      body = text ?? ''
+    },
+  }
+  await registeredRoute.handler(req, res)
+  if (status !== 200) throw new Error(`handler returned HTTP ${status}: ${body}`)
+  const envelope = JSON.parse(body)
+  if (envelope.type !== 'server-response' || envelope.rpcId !== rpcId) {
+    throw new Error(`bad envelope: ${body}`)
+  }
+  return envelope.result
+}
 
 // ---- assertion helpers ----------------------------------------------------
 let failures = 0

@@ -765,15 +765,83 @@ async function handleRpc(ctx, endpoint, payload) {
 }
 
 /**
- * Mount the RPC channel. The Connection service authenticates the Web channel,
- * so a headless composition without it simply skips the registration.
+ * Read one request body as UTF-8 text.
+ * @param {import('node:http').IncomingMessage} req - the request.
+ * @returns {Promise<string>} the body.
+ */
+function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    req.on('data', (chunk) => chunks.push(chunk))
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+    req.on('error', reject)
+  })
+}
+
+/**
+ * Mount the RPC channel.
+ *
+ * `connection.rpc.handle()` cannot be used on this DSH build: it registers its
+ * route through `owner.webServer.register(...)`, where `owner` is the
+ * Connection plugin's own fiber, and that fiber never injects `webServer`
+ * (it only uses it inside a nested `ctx.inject(['webServer'], ...)`), so the
+ * call always throws `cannot get property "webServer" without inject` and
+ * aborts this whole host half. Registering the route on our own context and
+ * speaking the documented wire envelope directly avoids that defect.
+ *
+ * Wire contract (mirrors `@deepseek-ai/dsh-client-connection`):
+ *   request  POST <RPC_CHANNEL>/<endpoint>
+ *            { type: 'client-request', rpcId, method, payload }
+ *   response { type: 'server-response', rpcId, result: { ok, value | error } }
+ *
  * @param ctx - plugin context.
  */
 export function apply(ctx) {
-  ctx.inject(['connection'], (connectionCtx) => {
-    const disposeRpc = connectionCtx.connection.rpc.handle(RPC_CHANNEL, handleRpc.bind(null, ctx))
-    return async () => {
-      await disposeRpc()
+  ctx.inject(['webServer'], (webCtx) => {
+    const route = {
+      kind: 'prefix',
+      path: RPC_CHANNEL,
+      handler: async (req, res) => {
+        // Keep the Host/Origin fence and browser authentication that
+        // `connection.rpc.handle()` would have applied for us.
+        const rejection = ctx.get('connection')?.requestRejection(req)
+        if (rejection !== undefined) {
+          res.writeHead(rejection)
+          res.end(rejection === 401 ? 'unauthorized' : 'forbidden')
+          return
+        }
+        if (req.method !== 'POST') {
+          res.writeHead(405)
+          res.end('method not allowed')
+          return
+        }
+        const contentType = req.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase()
+        if (contentType !== 'application/json') {
+          res.writeHead(415)
+          res.end('content type must be application/json')
+          return
+        }
+        let message
+        try {
+          message = JSON.parse(await readRequestBody(req))
+        } catch {
+          res.writeHead(400)
+          res.end('body is not JSON')
+          return
+        }
+        const rpcId = message?.rpcId
+        if (typeof rpcId !== 'string') {
+          res.writeHead(400)
+          res.end('missing rpcId')
+          return
+        }
+        const endpoint = typeof message?.method === 'string' ? message.method : ''
+        const result = await handleRpc(ctx, endpoint, message?.payload)
+        const body = JSON.stringify({ type: 'server-response', rpcId, result })
+        res.writeHead(200, { 'content-type': 'application/json' })
+        res.end(body)
+      },
     }
+    return webCtx.effect(() => webCtx.webServer.register(route), 'dsh-session-delete: rpc channel')
   })
 }
